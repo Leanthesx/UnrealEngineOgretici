@@ -8,13 +8,15 @@ Selamlar, bu eğitim serisinde sizlere Unreal Engine hakkında bildiklerimi akta
 
 [2.Temel Sınıflar ve Kavramlar](#2Temel-Sınıflar-ve-Kavramlar)
 
-[2.1.ReflectionSystem](#21ReflectionSystem)
+[2.1.Reflection System](#21Reflection-System)
 
-[2.2.UnrealHeaderTool](#22UnrealHeaderTool)
+[2.2.Unreal Header Tool](#22Unreal-Header-Tool)
 
-[2.3.CoreMinimal.h](#23CoreMinimal.hl)
+[2.3.Garbage Collection](#23Garbage-Collection)
 
-[2.4.Engine.h](#24Engine.h)
+[2.4.CoreMinimal.h](#23CoreMinimalh)
+
+[2.5.Engine.h](#24Engineh)
 
 ## 1.IDE Nedir?
 IDE(Integrated Development Environment) türkçesiyle Tümleşik Geliştirme Ortamı, bir yazılımcının programlama dilini yazdığı uygulamadır. IDE, yazılım geliştirmek için gerekli tüm araçları birleştiren bir yazılım paketidir. Kod editörü, hata ayıklama özelliği, derleyici ve otomatik kod tamamlama gibi özellikler içerir. Size biri ücretsiz biri ücretli iki tane IDE önerisinde bulunacağım.
@@ -61,8 +63,31 @@ Unreal Engine C++ projesinde, kodların derlenmesi 2 aşama ile gerçekleşir.
 - Unreal Build Tool(UBT) UHT'yi çağırır ve yukarıdaki işlemler yapılır.
 - UBT, sonucu derlemesi için C++ Compiler'ini çağırır.
 
+### 2.3.GarbageCollection
+Java ve bazı nesne yönelimli programlama dillerinde Garbage Collection vardır. Bu sistem, artık görevi olmayan değişkenleri bellekten silme işlemidir. C++'da bu iş otomatik olarak değil programcı tarafından yapılmaktadır. Bu bazen hatalara yol açabilmektedir. Bu yüzden Unreal Engine kendi Garbage Collection sistemini oluşturmuştur. Peki Unreal Engine'de Garbage Collection nasıl yazılır?
 
-### 2.3.CoreMinimal.h
+Garbage Collection hakkında endişelenmemiz gereken durumu iyi bilmemiz gerekmektedir. Eğer oluşturulan pointer objesi bir fonksiyonun içindeyse endişelenecek bir durum yoktur. Bu pointerlar normal C++ kodu gibi çalışır.
+
+![gcinfunction](https://github.com/user-attachments/assets/cebd1093-9582-4f56-9d7c-fb266f1d57a9)
+
+Asıl önemli olan kısım, pointerin tek bir framede değil daha fazla framede çalışmasını istediğimizde ortaya çıkabilecek sorunlardır. Header file içine tanımlanan pointera bir göz atalım.
+
+![image](https://github.com/user-attachments/assets/df43db30-ceb8-40b0-94bb-fe92422d5da2)
+
+Burada AActor* pointerinden önce UPROPERTY() kullanarak(içerisine bir şey yazmamıza gerek yoktur.) Unreal Build Tool'a, bu objenin Unreal Garbage Collection System ile düzgün bir şekilde çalışmasını söylemiş oluyoruz. Peki bu objeyi yok ettiğimiz zaman ne oluyor? Bir objeyi destroy ettiğimiz zaman frame sonunda bu obje kendini dünyadan siler yani frame sonuna kadar var olmaya devam eder ve yok edildiği zaman null değeri alır.
+
+Garbace Collection'u ilgilendiren objeler sadece UObject tarafından türetilmiş objelerdir. Yani structure ve standart veri türleri(float, int32 vs.) Garbage Collection kapsamı dışındadır.
+
+Garbage Collection'un çalışma sistemini anlamak için Rootset'in ne olduğunu bilmek gerekiyor. Rootset, bellekten kesinlikle silinmemesi gereken objelerin olduğu bir küme olarak düşünülebilir. Motor, hangi UObject'lerin hala kullanımda olduğunu ve hangilerinin null olduğunu belirlemek için bir referans grafiği oluşturur. Bu grafiğin kökünde “Rootset” bulunur. Herhangi bir UObject Rootset'e eklenebilir. Garbage Collection işlemi gerçekleştiğinde, motor Rootset'ten başlayarak bir tarama gerçekleştirir, UObject referanslarını takip eder. Referans edilmeyen UObject'ler, yani taramada bulunamayanlar, gereksiz olarak kabul edilecek ve kaldırılacaktır.
+
+Aşağıdaki fonksiyonlar sayesinde bir objeyi Rootset'e ekleyebilir ya da çıkartabiliriz.
+
+![image](https://github.com/user-attachments/assets/5503c848-6bde-4860-ba64-a423e5429cca)
+
+Garbage Collection döngüsel bir işlemdir. Her 30-60 saniyede bir tetiklenir(Belleğinizdeki boş alana göre bu süre uzayıp kısalabilir). IsValid() fonksiyonu ile objenin dünyada var olup olmadığını, bir sonraki döngüde Garbage Collection için işaretlenip işaretlenmediğini kontrol edebiliriz. Eğer obje yok edilmişse, null değerine sahipse, false değeri döndürür.
+
+
+### 2.4.CoreMinimal.h
 CoreMinimal.h dosyası, genellikle daha büyük başlık dosyalarının sağladığı ek işlevsellik ve bağımlılıklardan kaçınarak, yalnızca en temel ve sık kullanılan özellikleri sunar. Sadece en gerekli bileşenleri içine dahil ettiği için derleme süresi ve performansı optimize etme açısından önemli bir role sahiptir. İçeriği:
 - Nesnelerin pozisyonlarını, yönelimlerini ve dönüşlerini ayarlamak için kullanılan "FVector", "FRotator", "FTransform"
 - Veri yapıları ve veri yönetimini sağlamak için kullanılan "TArray", "TMap", "TSet"
@@ -71,7 +96,7 @@ CoreMinimal.h dosyası, genellikle daha büyük başlık dosyalarının sağlad�
 
 Herhangi bir C++ dosyası açtığımızda(None, Character, Actor, ActorComponent, SceneComponent, Interface, GameModeBase vb.) CoreMinimal.h dosyası eklenmiş bir şekilde gelir.
 
-### 2.4.Engine.h
+### 2.5.Engine.h
 Engine.h dosyası, motorun tüm özelliklerine erişim sağlar ve derleme süresi uzundur. İçerdiği bileşenlere ek olarak fizik motoru, ağ özellikleri, animasyon sistemleri, yapay zeka ve diğer yüksek seviye Unreal Engine modüllerini de içerir. İçeriği: 
 - Temel motor bileşenleri olan "UObject", "AActor", "GameMode", "GameState", "PlayerController"
 - Görselleştirme ve grafik işlemleri için kullanılan "UPrimitiveComponent", "UMeshComponent", "UStaticMesh", "USkeletalMesh", "UMaterial", "UCameraComponent", "ACameraActor", "Post-Processing"
