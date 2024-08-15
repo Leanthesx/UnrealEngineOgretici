@@ -8,15 +8,21 @@ Selamlar, bu eğitim serisinde sizlere Unreal Engine hakkında bildiklerimi akta
 
 [2.Temel Sınıflar ve Kavramlar](#2Temel-Sınıflar-ve-Kavramlar)
 
-[2.1.Reflection System](#21Reflection-System)
+[2.1.Reflection System](#Reflection-System)
 
-[2.2.Unreal Header Tool](#22Unreal-Header-Tool)
+[2.2.Unreal Build Tool](#Unreal-Build-Tool)
 
-[2.3.Garbage Collection](#23Garbage-Collection)
+[2.3.Unreal Header Tool](#Unreal-Header-Tool)
 
-[2.4.CoreMinimal.h](#23CoreMinimalh)
+[2.4.Garbage Collection](#garbage-collection)
 
-[2.5.Engine.h](#24Engineh)
+[2.5.Pragma Once](#pragma-once)
+
+[2.6.UCLASS](#uclass)
+
+[2.7.CoreMinimal.h](#coreminimalh)
+
+[2.8.Engine.h](#engineh)
 
 ## 1.IDE Nedir?
 IDE(Integrated Development Environment) türkçesiyle Tümleşik Geliştirme Ortamı, bir yazılımcının programlama dilini yazdığı uygulamadır. IDE, yazılım geliştirmek için gerekli tüm araçları birleştiren bir yazılım paketidir. Kod editörü, hata ayıklama özelliği, derleyici ve otomatik kod tamamlama gibi özellikler içerir. Size biri ücretsiz biri ücretli iki tane IDE önerisinde bulunacağım.
@@ -56,14 +62,21 @@ Reflection System, Metadata ve tür bilgilerini runtime sırasında erişilebili
 - C++ sınıflarının Blueprintler içinde kullanılmasını sağlar. Örneğin, UPROPERTY makrosu, belirli bir C++ değişkeninin Blueprint içinde editlenebilir hale gelmesini sağlar.
 - Verilerin kaydedilip yüklenmesi işlemleri için önemlidir.
 
-### 2.2.UnrealHeaderTool
+### 2.2.Unreal Build Tool
+Unreal Build Tool bir derleme aracıdır. Bu derleme aracının özellikleri:
+
+- Tek bir projeyi farklı platformlara çıkartabilmek için optimize edilmiştir.
+- Her bir modül için ayrı ayrı derleme işlemi yapar.
+- .uproject dosyasındaki bilgileri alır ve derleme işlemini buradaki bilgilere göre yapar.
+
+### 2.3.Unreal Header Tool
 Unreal Header Tool (UHT), Unreal Engine için kod oluşturma aracıdır. UHT, kaynak dosyalarını tarar ve "UCLASS", "USTRUCT", "UENUM", "UPROPERTY", "UFUNCTION" gibi makroları arar. Bu makroların bulunduğu yerlerde, UHT gerekli meta verileri üretir. Bu meta veriler, daha sonra "Generated.h" dosyalarına yerleştirilir ve Reflection System tarafından kullanılır. 
 Unreal Engine C++ projesinde, kodların derlenmesi 2 aşama ile gerçekleşir.
 
 - Unreal Build Tool(UBT) UHT'yi çağırır ve yukarıdaki işlemler yapılır.
 - UBT, sonucu derlemesi için C++ Compiler'ini çağırır.
 
-### 2.3.GarbageCollection
+### 2.4.Garbage Collection
 Java ve bazı nesne yönelimli programlama dillerinde Garbage Collection vardır. Bu sistem, artık görevi olmayan değişkenleri bellekten silme işlemidir. C++'da bu iş otomatik olarak değil programcı tarafından yapılmaktadır. Bu bazen hatalara yol açabilmektedir. Bu yüzden Unreal Engine kendi Garbage Collection sistemini oluşturmuştur. Peki Unreal Engine'de Garbage Collection nasıl yazılır?
 
 Garbage Collection hakkında endişelenmemiz gereken durumu iyi bilmemiz gerekmektedir. Eğer oluşturulan pointer objesi bir fonksiyonun içindeyse endişelenecek bir durum yoktur. Bu pointerlar normal C++ kodu gibi çalışır.
@@ -86,8 +99,16 @@ Aşağıdaki fonksiyonlar sayesinde bir objeyi Rootset'e ekleyebilir ya da çık
 
 Garbage Collection döngüsel bir işlemdir. Her 30-60 saniyede bir tetiklenir(Belleğinizdeki boş alana göre bu süre uzayıp kısalabilir). IsValid() fonksiyonu ile objenin dünyada var olup olmadığını, bir sonraki döngüde Garbage Collection için işaretlenip işaretlenmediğini kontrol edebiliriz. Eğer obje yok edilmişse, null değerine sahipse, false değeri döndürür.
 
+### 2.5.Pragma Once
+Preprocessor, önişlemci anlamına gelir. Kodlar derlenmeden önce bu aşama gerçekleşir. Derleme işleminden önce kaynak kod üzerinde bir takım düzenlemeler yapar. Include, macro, define birkaç Preprocessor örneğidir. Örneğin pi sayısını tanımlayan bir macro oluşturalım. #define PI 3.14 olarak tanımlarız. Kod derlenmeden önce PI yazısının 3.14'e eşit olduğu anlaşılır ve her PI yazan yer 3.14'e eşitlenir. Yani kod derlenmeden önce bu bilgi işlenir. Preprocessor # ile başlar.
 
-### 2.4.CoreMinimal.h
+Bir C++ dosyası açtığımızda, açılan header dosyasının ilk satırında #pragma once yazısını görürüz. Bu preprocessor, bir dosyanın bir kere dahil edildiğinden emin olur. Diyelim "x" adındaki dosyayı kodumuza dahil ettik, bu dosyayı birden fazla kez dahil edersek pragma once bu aşamaları atlar ve dosyayı kodumuza bir kere ekler.
+
+### 2.6.UCLASS
+UCLASS() makrosu, bir C++ sınıfını Unreal Engine'e ait bir sınıf olarak işaretler. Bu sayede sınıf, Unreal Engine'in Reflection Sistemi tarafından tanınır ve motorun farklı bileşenleri tarafından kullanılabilir hale gelir.
+
+
+### 2.7.Core Minimal.h
 CoreMinimal.h dosyası, genellikle daha büyük başlık dosyalarının sağladığı ek işlevsellik ve bağımlılıklardan kaçınarak, yalnızca en temel ve sık kullanılan özellikleri sunar. Sadece en gerekli bileşenleri içine dahil ettiği için derleme süresi ve performansı optimize etme açısından önemli bir role sahiptir. İçeriği:
 - Nesnelerin pozisyonlarını, yönelimlerini ve dönüşlerini ayarlamak için kullanılan "FVector", "FRotator", "FTransform"
 - Veri yapıları ve veri yönetimini sağlamak için kullanılan "TArray", "TMap", "TSet"
@@ -96,7 +117,7 @@ CoreMinimal.h dosyası, genellikle daha büyük başlık dosyalarının sağlad�
 
 Herhangi bir C++ dosyası açtığımızda(None, Character, Actor, ActorComponent, SceneComponent, Interface, GameModeBase vb.) CoreMinimal.h dosyası eklenmiş bir şekilde gelir.
 
-### 2.5.Engine.h
+### 2.8.Engine.h
 Engine.h dosyası, motorun tüm özelliklerine erişim sağlar ve derleme süresi uzundur. İçerdiği bileşenlere ek olarak fizik motoru, ağ özellikleri, animasyon sistemleri, yapay zeka ve diğer yüksek seviye Unreal Engine modüllerini de içerir. İçeriği: 
 - Temel motor bileşenleri olan "UObject", "AActor", "GameMode", "GameState", "PlayerController"
 - Görselleştirme ve grafik işlemleri için kullanılan "UPrimitiveComponent", "UMeshComponent", "UStaticMesh", "USkeletalMesh", "UMaterial", "UCameraComponent", "ACameraActor", "Post-Processing"
